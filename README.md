@@ -1,5 +1,5 @@
 <div align="center">
-# Google AI Studio - Gemini API
+<h1> Google AI Studio - Gemini API </h1>
 A brief introduction to Google AI Studio
 
 [Tecnologias](#tecnologias)
@@ -108,3 +108,63 @@ Porém são dadas intruções para o chat-bot em como se comportar, e como apres
 ~~~
 
 ### Embeddings
+Embeddings são uma tradução da linguagem de texto, audio ou vídeo, para uma linguagem que a máquina entenda, que são os vetores. Embeddings são usados em várias áreas de inteligência artificial, principalmente em Processamento de Linguagem Natural (PLN), que é a parte da IA que lida com texto. 
+É necessário duas bibliotecas para executar o projeto:
+~~~bash
+    pip install numpy
+    pip install pandas
+~~~
+
+Após configurar a Google API, pode-se verificar os modelos disponíveis para embeddings
+~~~python
+    for modelSupported in genai.list_models():
+        if 'embedContent' in modelSupported.supported_generation_methods:
+            print(modelSupported.name )
+~~~
+
+Após fornecidos os documentos que serão o foco da busca, transforma-se o conteúdo em DataFrame
+~~~python
+    DOCUMENT1 = {
+    "Título": "Operação do sistema de controle climático",
+    "Conteúdo": "O Googlecar tem um sistema de controle climático ..."}
+    DOCUMENT2 = {
+        "Título": "Touchscreen",
+        "Conteúdo": "O seu Googlecar tem uma grande tela ..."}
+    DOCUMENT3 = {
+        "Título": "Mudança de marchas",
+        "Conteúdo": "Seu Googlecar ..."}
+    documents = [DOCUMENT1, DOCUMENT2, DOCUMENT3]
+
+    df = pd.DataFrame(documents)
+    df.columns = ["Title", "Content"]
+~~~
+
+Transforma o documento em embedding:
+~~~python
+    def embed_fn(title, text):
+        return genai.embed_content(
+                    model=model,
+                    content=text,
+                    title=title,
+                    task_type="RETRIEVAL_DOCUMENT"
+            )["embedding"]
+    df["Embeddings"] = df.apply(lambda row: embed_fn(row["Title"], row["Content"]), axis=1)
+    print (df)
+~~~
+
+Transforma a consulta em embedding e aplica ela aos documentos: 
+~~~python
+    def generateAndSearchQuery(query, base, model):
+        queryEmbed = genai.embed_content(
+                    model=model,
+                    content=query,
+                    task_type="RETRIEVAL_QUERY"
+            )
+        produtos_escalares = np.dot(np.stack(df["Embeddings"]), queryEmbed["embedding"])
+        index = np.argmax(produtos_escalares)
+        return df.iloc[index]["Content"]
+
+    query = "Como faço para trocar a marcha em um carro da Google?"
+    queryResult = generateAndSearchQuery(query, df, model)
+    print("\n", queryResult , "\n")
+~~~
